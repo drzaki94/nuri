@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4f46e5">
-
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      // Use relative path for GitHub Pages compatibility
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('SW Registered!', reg.scope))
-        .catch(err => console.log('SW Setup failed!', err));
-    });
-  }
-</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nuri Junior 4 Timetable</title>
+    
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nuri Junior">
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Using ./ ensures it finds sw.js within the /nuri/ folder
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW Registered!', reg.scope))
+            .catch(err => console.log('SW Setup failed!', err));
+        });
+      }
+    </script>
+
     <style>
         :root {
             --primary: #4f46e5;
@@ -102,7 +107,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Timetable Table Styles (Preserved) */
+        /* Timetable Table Styles */
         .table-container {
             overflow-x: auto;
             background: white;
@@ -139,7 +144,7 @@
             white-space: nowrap;
         }
 
-        /* Day Specific Styles (Preserved) */
+        /* Day Specific Styles */
         .select-wrapper { margin-bottom: 20px; }
         select {
             width: 100%;
@@ -174,7 +179,7 @@
             font-weight: 500;
         }
 
-        /* ENHANCED HOMEWORK SECTION */
+        /* Enhanced Homework Styles */
         .hw-card {
             background: white;
             padding: 18px;
@@ -238,7 +243,6 @@
             opacity: 0.6;
         }
 
-        /* Subject Visual Tags */
         .tag {
             display: inline-block;
             padding: 2px 8px;
@@ -347,13 +351,11 @@
             </div>
         </div>
         
-        <div id="taskList">
-            </div>
+        <div id="taskList"></div>
     </div>
 </div>
 
 <script>
-    // Data (Preserved from original)
     const scheduleData = [
         { time: "07:45 - 08:00", subjects: ["Headstart in PowerReading", "Headstart in PowerReading", "Headstart in PowerReading", "Headstart in PowerReading", "Headstart in PowerReading"] },
         { time: "08:00 - 08:10", subjects: ["Active Start", "Active Start", "Active Start", "Active Start", "Active Start"] },
@@ -369,16 +371,17 @@
         { time: "11:55 - 12:00", subjects: ["Summary of day", "Summary of day", "Summary of day", "Summary of day", "Summary of day"] }
     ];
 
-    // Navigation (Preserved)
     function showPage(pageId) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
-        event.currentTarget.classList.add('active');
+        // Handle click event correctly
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('active');
+        }
         if(pageId === 'specific') renderDaySpecific();
     }
 
-    // Render Logic (Preserved)
     function renderFullTimetable() {
         const body = document.getElementById('tableBody');
         body.innerHTML = '';
@@ -402,7 +405,6 @@
         });
     }
 
-    // ENHANCED HOMEWORK LOGIC
     let homeworks = JSON.parse(localStorage.getItem('nuri_homework_v2') || '[]');
 
     function getTagClass(subject) {
@@ -429,7 +431,6 @@
         homeworks.unshift(task);
         saveAndRender();
         
-        // Clear form
         document.getElementById('hwBook').value = '';
         document.getElementById('hwPage').value = '';
         document.getElementById('hwNotes').value = '';
@@ -495,5 +496,4 @@
 </script>
 
 </body>
-
 </html>

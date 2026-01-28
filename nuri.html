@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      // Use relative path for GitHub Pages compatibility
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('SW Registered!', reg.scope))
+        .catch(err => console.log('SW Setup failed!', err));
+    });
+  }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nuri Junior 4 Timetable</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #9333ea;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --muted: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --accent: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.025em; }
+        
+        nav {
+            display: flex;
+            background: white;
+            padding: 5px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            border: none;
+            background: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .container {
+            padding: 15px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .page {
+            display: none;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Timetable Table Styles (Preserved) */
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+        }
+
+        .time-col {
+            font-weight: 600;
+            background: #f8fafc;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        /* Day Specific Styles (Preserved) */
+        .select-wrapper { margin-bottom: 20px; }
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+            background: white;
+        }
+
+        .day-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .day-time {
+            min-width: 90px;
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.85rem;
+        }
+
+        .day-subject {
+            flex: 1;
+            padding-left: 15px;
+            border-left: 2px solid #e2e8f0;
+            font-weight: 500;
+        }
+
+        /* ENHANCED HOMEWORK SECTION */
+        .hw-card {
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .hw-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .hw-form input, .hw-form select, .hw-form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .hw-form textarea {
+            grid-column: span 2;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .full-width { grid-column: span 2; }
+
+        .btn {
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary { background: var(--primary); color: white; margin-top: 5px; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+
+        .task-list-item {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            border-left: 6px solid var(--primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .task-list-item.completed {
+            border-left-color: #cbd5e1;
+            opacity: 0.6;
+        }
+
+        /* Subject Visual Tags */
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .tag-english { background: #dbeafe; color: #1e40af; }
+        .tag-maths { background: #fef3c7; color: #92400e; }
+        .tag-science { background: #dcfce7; color: #166534; }
+        .tag-language { background: #f3e8ff; color: #6b21a8; }
+        .tag-other { background: #f1f5f9; color: #475569; }
+
+        .task-title { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+        .task-detail { font-size: 0.85rem; color: var(--muted); margin: 4px 0; }
+        .task-notes { 
+            font-size: 0.85rem; 
+            background: #f8fafc; 
+            padding: 8px; 
+            border-radius: 6px; 
+            margin-top: 8px;
+            border-left: 2px solid #e2e8f0;
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-top: 10px;
+            color: var(--muted);
+            border-top: 1px solid #f1f5f9;
+            padding-top: 10px;
+        }
+
+        .original-img { width: 100%; border-radius: 8px; margin-top: 20px; }
+        .empty-state { text-align: center; color: var(--muted); padding: 40px 20px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Nuri Junior 4</h1>
+</header>
+
+<nav>
+    <button class="tab-btn active" onclick="showPage('timetable')">Timetable</button>
+    <button class="tab-btn" onclick="showPage('specific')">Day Specific</button>
+    <button class="tab-btn" onclick="showPage('homework')">Homework</button>
+</nav>
+
+<div class="container">
+    <div id="timetable" class="page active">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Mon</th>
+                        <th>Tue</th>
+                        <th>Wed</th>
+                        <th>Thu</th>
+                        <th>Fri</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <div style="text-align:center;">
+            <p style="font-size: 0.8rem; color: var(--muted);">Original Photo Reference</p>
+            <img id="refImage" class="original-img" alt="Timetable Reference">
+        </div>
+    </div>
+
+    <div id="specific" class="page">
+        <div class="select-wrapper">
+            <select id="dayPicker" onchange="renderDaySpecific()">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+            </select>
+        </div>
+        <div id="dayScheduleContainer"></div>
+    </div>
+
+    <div id="homework" class="page">
+        <div class="hw-card">
+            <h3 style="margin: 0 0 15px 0; font-size: 1.1rem;">Add Assignment</h3>
+            <div class="hw-form">
+                <select id="hwSubject" class="full-width">
+                    <option value="English">PowerEnglish / Reading</option>
+                    <option value="Maths">PowerMaths</option>
+                    <option value="Language">Celik Bahasa / Mandarin / Jawi</option>
+                    <option value="Science">Junior Lab / Thematic</option>
+                    <option value="Other">Other / Arts</option>
+                </select>
+                <input type="text" id="hwBook" placeholder="Book Title / Subject" class="full-width">
+                <input type="text" id="hwPage" placeholder="Page(s)">
+                <input type="date" id="hwDue">
+                <textarea id="hwNotes" placeholder="Specific notes or instructions..."></textarea>
+                <button class="btn btn-primary full-width" onclick="addHomework()">Save Homework</button>
+            </div>
+        </div>
+        
+        <div id="taskList">
+            </div>
+    </div>
+</div>
+
+<script>
+    // Data (Preserved from original)
+    const scheduleData = [
+        { time: "07:45 - 08:00", subjects: ["Headstart in PowerReading", "Headstart in PowerReading", "Headstart in PowerReading", "Headstart in PowerReading", "Headstart in PowerReading"] },
+        { time: "08:00 - 08:10", subjects: ["Active Start", "Active Start", "Active Start", "Active Start", "Active Start"] },
+        { time: "08:10 - 08:30", subjects: ["Assembly", "Assembly", "Assembly", "Assembly", "Assembly"] },
+        { time: "08:30 - 08:40", subjects: ["Sharing Time", "Sharing Time", "Sharing Time", "Sharing Time", "Sharing Time"] },
+        { time: "08:40 - 09:20", subjects: ["Fitness Fun", "Celik Jawi / Mandarin / Tamil", "PowerEnglish", "Celik Bahasa", "Explore Escapade"] },
+        { time: "09:20 - 10:00", subjects: ["PowerEnglish", "Pendidikan Islam / Moral", "Thematic", "Tema", "PowerMaths"] },
+        { time: "10:00 - 10:15", subjects: ["Snack Time", "Snack Time", "Snack Time", "Snack Time", "Snack Time"] },
+        { time: "10:15 - 10:55", subjects: ["PowerMaths", "Bahasa Arab / Mandarin / Tamil", "Celik Bahasa", "Junior Lab", "Art Odyssey"] },
+        { time: "10:55 - 11:15", subjects: ["Ladybird", "BJDN / ICR (Mandarin) / ICR (Tamil)", "Ladybird", "Ladybird", "Ladybird"] },
+        { time: "11:15 - 11:35", subjects: ["Mari Membaca Di Nuri", "Mari Membaca Di Nuri", "Mari Membaca Di Nuri", "Mari Membaca Di Nuri", "Happy Readers"] },
+        { time: "11:35 - 11:55", subjects: ["Magic Box", "Doa & Surah / Yaa Rab / Mand. Strokes / Tamil Rhymes", "Oxford Phonics", "Magic Box", "Oxford Phonics"] },
+        { time: "11:55 - 12:00", subjects: ["Summary of day", "Summary of day", "Summary of day", "Summary of day", "Summary of day"] }
+    ];
+
+    // Navigation (Preserved)
+    function showPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(pageId === 'specific') renderDaySpecific();
+    }
+
+    // Render Logic (Preserved)
+    function renderFullTimetable() {
+        const body = document.getElementById('tableBody');
+        body.innerHTML = '';
+        scheduleData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td class="time-col">${row.time.replace(' - ', '<br>')}</td>` + 
+                row.subjects.map(s => `<td>${s}</td>`).join('');
+            body.appendChild(tr);
+        });
+    }
+
+    function renderDaySpecific() {
+        const dayIdx = parseInt(document.getElementById('dayPicker').value) - 1;
+        const container = document.getElementById('dayScheduleContainer');
+        container.innerHTML = '';
+        scheduleData.forEach(row => {
+            const div = document.createElement('div');
+            div.className = 'day-item';
+            div.innerHTML = `<div class="day-time">${row.time}</div><div class="day-subject">${row.subjects[dayIdx]}</div>`;
+            container.appendChild(div);
+        });
+    }
+
+    // ENHANCED HOMEWORK LOGIC
+    let homeworks = JSON.parse(localStorage.getItem('nuri_homework_v2') || '[]');
+
+    function getTagClass(subject) {
+        const map = { 'English': 'tag-english', 'Maths': 'tag-maths', 'Science': 'tag-science', 'Language': 'tag-language' };
+        return map[subject] || 'tag-other';
+    }
+
+    function addHomework() {
+        const book = document.getElementById('hwBook').value.trim();
+        const subject = document.getElementById('hwSubject').value;
+        const page = document.getElementById('hwPage').value.trim();
+        const due = document.getElementById('hwDue').value;
+        const notes = document.getElementById('hwNotes').value.trim();
+
+        if (!book) { alert("Please enter at least a book title or subject!"); return; }
+
+        const task = {
+            id: Date.now(),
+            subject, book, page, due, notes,
+            completed: false,
+            created: new Date().toISOString()
+        };
+
+        homeworks.unshift(task);
+        saveAndRender();
+        
+        // Clear form
+        document.getElementById('hwBook').value = '';
+        document.getElementById('hwPage').value = '';
+        document.getElementById('hwNotes').value = '';
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('nuri_homework_v2', JSON.stringify(homeworks));
+        renderHomework();
+    }
+
+    function toggleComplete(id) {
+        const task = homeworks.find(t => t.id === id);
+        if (task) task.completed = !task.completed;
+        saveAndRender();
+    }
+
+    function deleteTask(id) {
+        if(confirm("Delete this entry?")) {
+            homeworks = homeworks.filter(t => t.id !== id);
+            saveAndRender();
+        }
+    }
+
+    function renderHomework() {
+        const container = document.getElementById('taskList');
+        container.innerHTML = '';
+
+        if (homeworks.length === 0) {
+            container.innerHTML = '<div class="empty-state">No homework tasks yet. Add one above!</div>';
+            return;
+        }
+
+        homeworks.forEach(task => {
+            const div = document.createElement('div');
+            div.className = `task-list-item ${task.completed ? 'completed' : ''}`;
+            
+            div.innerHTML = `
+                <div class="tag ${getTagClass(task.subject)}">${task.subject}</div>
+                <div class="task-title">${task.book}</div>
+                ${task.page ? `<div class="task-detail"><strong>Page:</strong> ${task.page}</div>` : ''}
+                ${task.notes ? `<div class="task-notes">${task.notes}</div>` : ''}
+                
+                <div class="task-meta">
+                    <span>Due: ${task.due ? new Date(task.due).toLocaleDateString() : 'No date'}</span>
+                    <span>Created: ${new Date(task.created).toLocaleDateString()}</span>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-success" style="flex:2" onclick="toggleComplete(${task.id})">
+                        ${task.completed ? 'Reopen' : 'Mark Done'}
+                    </button>
+                    <button class="btn btn-danger" style="flex:1" onclick="deleteTask(${task.id})">Delete</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    window.onload = () => {
+        renderFullTimetable();
+        renderHomework();
+    };
+</script>
+
+</body>
+</html>
